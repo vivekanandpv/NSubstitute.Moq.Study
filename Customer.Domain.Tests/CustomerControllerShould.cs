@@ -15,69 +15,44 @@ namespace Customer.Domain.Tests
         }
 
         [Fact]
-        public void ReturnCustomerForAnyIntIdNSubstitute()
+        public void SubsequentReturnsInNSubstitute()
         {
             ICustomerService service = Substitute.For<ICustomerService>();
-
 
             service.Get(Arg.Any<int>())
-                .Returns(new Customer { Email = "mock@gmail.com", Id = 0, Name = "Mr Mock" });
-
-
-            CustomerController controller = new CustomerController(service);
-
-
-            Assert.IsType<Customer>(controller.Get(13));
-        }
-
-        [Fact]
-        public void ThrowArgumentExceptionForOddIdNSubstitute()
-        {
-            ICustomerService service = Substitute.For<ICustomerService>();
-
-
-            service.Get(Arg.Is<int>(i => i % 2 != 0))
-                .Throws(new ArgumentException("Invalid id"));
-
+                .Returns(
+                    new Customer { Email = "mock@gmail.com", Id = 1, Name = "Mr Mock" }, 
+                    new Customer { Email = "mock2@gmail.com", Id = 2, Name = "Mr Mock2" }, 
+                    new Customer { Email = "mock3@gmail.com", Id = 3, Name = "Mr Mock3" }
+                    );
 
             CustomerController controller = new CustomerController(service);
 
-            Assert.Throws<ArgumentException>(() => controller.Get(13));
+            Assert.Equal(1, controller.Get(12).Id);
+            Assert.Equal(2, controller.Get(12).Id);
+            Assert.Equal(3, controller.Get(12).Id);
         }
 
         [Fact]
-        public void ReturnCustomerForAnyIntIdMoq()
+        public void SubsequentReturnsInMoq()
         {
             var mockWrapper = new Mock<ICustomerService>();
 
             mockWrapper
-                .Setup(s => s.Get(It.IsAny<int>()))
-                .Returns(new Customer { Email = "mock@gmail.com", Id = 0, Name = "Mr Mock" });
+                .SetupSequence(s => s.Get(It.IsAny<int>()))
+                .Returns(new Customer { Email = "mock@gmail.com", Id = 1, Name = "Mr Mock" })
+                .Returns(new Customer { Email = "mock2@gmail.com", Id = 2, Name = "Mr Mock2" })
+                .Returns(new Customer { Email = "mock3@gmail.com", Id = 3, Name = "Mr Mock3" })
+                .Throws(new ArgumentException("Invalid id"));   //  Throws at 4th invocation
 
             ICustomerService service = mockWrapper.Object;
 
-
             CustomerController controller = new CustomerController(service);
 
-
-            Assert.IsType<Customer>(controller.Get(13));
-        }
-
-        [Fact]
-        public void ThrowArgumentExceptionForOddIdMoq()
-        {
-            var mockWrapper = new Mock<ICustomerService>();
-
-            mockWrapper
-                .Setup(s => s.Get(It.Is<int>(i => i % 2 != 0)))
-                .Throws(new ArgumentException("Invalid id"));
-
-            ICustomerService service = mockWrapper.Object;
-
-
-            CustomerController controller = new CustomerController(service);
-
-            Assert.Throws<ArgumentException>(() => controller.Get(13));
+            Assert.Equal(1, controller.Get(12).Id);
+            Assert.Equal(2, controller.Get(12).Id);
+            Assert.Equal(3, controller.Get(12).Id);
+            Assert.Throws<ArgumentException>(() => controller.Get(12));
         }
     }
 }
