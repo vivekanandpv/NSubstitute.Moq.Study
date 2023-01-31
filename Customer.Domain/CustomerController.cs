@@ -16,6 +16,11 @@
             return _customerService.Get(id);    //  delegation
         }
 
+        public Customer Get(string name)
+        {
+            return _customerService.Get(name);    //  delegation
+        }
+
         public void Save(Customer customer)
         {
             _customerService.Save(customer);
@@ -33,5 +38,6 @@
     {
         void Save(Customer customer);
         Customer Get(int id);
+        Customer Get(string name);
     }
 }

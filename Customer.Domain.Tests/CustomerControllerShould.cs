@@ -1,7 +1,9 @@
+using System.Text.RegularExpressions;
 using Moq;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit.Abstractions;
+using Range = Moq.Range;
 
 namespace Customer.Domain.Tests
 {
@@ -13,46 +15,28 @@ namespace Customer.Domain.Tests
         {
             _helper = helper;
         }
-
-        [Fact]
-        public void ReturnCustomerForAnyIntIdNSubstitute()
-        {
-            ICustomerService service = Substitute.For<ICustomerService>();
-
-
-            service.Get(Arg.Any<int>())
-                .Returns(new Customer { Email = "mock@gmail.com", Id = 0, Name = "Mr Mock" });
-
-
-            CustomerController controller = new CustomerController(service);
-
-
-            Assert.IsType<Customer>(controller.Get(13));
-        }
-
-        [Fact]
-        public void ThrowArgumentExceptionForOddIdNSubstitute()
-        {
-            ICustomerService service = Substitute.For<ICustomerService>();
-
-
-            service.Get(Arg.Is<int>(i => i % 2 != 0))
-                .Throws(new ArgumentException("Invalid id"));
-
-
-            CustomerController controller = new CustomerController(service);
-
-            Assert.Throws<ArgumentException>(() => controller.Get(13));
-        }
-
+        
         [Fact]
         public void ReturnCustomerForAnyIntIdMoq()
         {
             var mockWrapper = new Mock<ICustomerService>();
 
+            //  Mock can be configured for multiple times
             mockWrapper
-                .Setup(s => s.Get(It.IsAny<int>()))
+                .Setup(s => s.Get(It.IsInRange(10, 100, Range.Exclusive)))
                 .Returns(new Customer { Email = "mock@gmail.com", Id = 0, Name = "Mr Mock" });
+
+            mockWrapper
+                .Setup(s => s.Get(It.IsRegex("[0-9]{4}$", RegexOptions.IgnoreCase)))
+                .Returns(new Customer { Email = "mock@gmail.com", Id = 0, Name = "Mr Mock" });
+
+            //  Please consider: https://github.com/Moq/moq4/wiki/Quickstart#matching-arguments
+            //It.Is<T>();
+            //It.IsIn();  //  for collection
+            //It.IsInRange(); //  for range (inclusive or exclusive)
+            //It.IsNotIn();   //  for collection
+            //It.IsNotNull<T>();  //  not null constraint
+            //It.IsRegex();   //  regex matching
 
             ICustomerService service = mockWrapper.Object;
 
@@ -61,23 +45,7 @@ namespace Customer.Domain.Tests
 
 
             Assert.IsType<Customer>(controller.Get(13));
-        }
-
-        [Fact]
-        public void ThrowArgumentExceptionForOddIdMoq()
-        {
-            var mockWrapper = new Mock<ICustomerService>();
-
-            mockWrapper
-                .Setup(s => s.Get(It.Is<int>(i => i % 2 != 0)))
-                .Throws(new ArgumentException("Invalid id"));
-
-            ICustomerService service = mockWrapper.Object;
-
-
-            CustomerController controller = new CustomerController(service);
-
-            Assert.Throws<ArgumentException>(() => controller.Get(13));
+            Assert.IsType<Customer>(controller.Get("Rajesh1245"));
         }
     }
 }
