@@ -33,5 +33,7 @@
     {
         void Save(Customer customer);
         Customer Get(int id);
+
+        event EventHandler<EventArgs> CustomerSaved;
     }
 }

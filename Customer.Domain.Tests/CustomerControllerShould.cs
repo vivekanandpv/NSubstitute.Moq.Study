@@ -16,50 +16,55 @@ namespace Customer.Domain.Tests
         }
 
         [Fact]
-        public void VerificationNSubstitute()
+        public void EventRaisingInNSubstituteWithManualApproach()
         {
             ICustomerService service = Substitute.For<ICustomerService>();
 
-            service.Get(Arg.Any<int>())
-                .Returns(
-                    _ => new Customer { Email = "mock@gmail.com", Id = 1, Name = "Mr Mock" }
-                );
+            bool eventRaised = false;
 
-            CustomerController controller = new CustomerController(service);
+            service.CustomerSaved += (sender, args) =>
+            {
+                eventRaised = true;
+            };
 
-            Customer customer = controller.Get(12);
+            service.CustomerSaved += Raise.EventWith<EventArgs>(new object(), new EventArgs());
 
-            service.Received().Get(Arg.Any<int>());
-            service.DidNotReceive().Get(Arg.Is<int>(i => i > 100));
-            service.Received(1).Get(12);
-            service.Received(1).Get(Arg.Is<int>(i => i > 10));
+            //  service.CustomerSaved += Raise.Event(); //  For simple cases
+
+            Assert.True(eventRaised);
         }
 
         [Fact]
-        public void SubsequentReturnsInMoq()
+        public void EventRaisingInNSubstituteWithXUnitApproach()
+        {
+            ICustomerService service = Substitute.For<ICustomerService>();
+
+            Assert.Raises<EventArgs>(
+                handler => service.CustomerSaved += handler,
+                handler => service.CustomerSaved -= handler,
+                () =>
+                {
+                    service.CustomerSaved += Raise.EventWith<EventArgs>(new object(), new EventArgs());
+                });
+        }
+
+        [Fact]
+        public void EventRaisingWithMoq()
         {
             var mockWrapper = new Mock<ICustomerService>();
 
-            mockWrapper
-                .Setup(s => s.Get(It.IsAny<int>()))
-                .Returns(new Customer { Email = "mock@gmail.com", Id = 1, Name = "Mr Mock" });   //  Throws at 4th invocation
 
             ICustomerService service = mockWrapper.Object;
 
             CustomerController controller = new CustomerController(service);
 
-            controller.Get(12);
-
-            mockWrapper.Verify(s => s.Get(It.IsAny<int>()), Times.Exactly(1));
-            
-            //  Other API for times specification
-            //Times.AtLeast(4);
-            //Times.AtLeastOnce();
-            //Times.AtMost(2);
-            //Times.AtMostOnce();
-            //Times.Between(4, 8, Range.Inclusive);   //  Also Exclusive
-            //Times.Never();
-            //Times.Once();
+            Assert.Raises<EventArgs>(
+                handler => service.CustomerSaved += handler,
+                handler => service.CustomerSaved -= handler,
+                () =>
+                {
+                    mockWrapper.Raise(s => s.CustomerSaved += null, new EventArgs());
+                });
         }
     }
 }
